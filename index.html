@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sadhana Daily Routine Tracker</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen font-sans pb-20 selection:bg-amber-500 selection:text-black">
+
+  <!-- Header -->
+  <header class="bg-slate-900 border-b border-slate-800 sticky top-0 z-40 px-4 py-3 shadow-md">
+    <div class="max-w-3xl mx-auto flex flex-wrap items-center justify-between gap-3">
+      <div class="flex items-center gap-2.5">
+        <span class="text-2xl">🕉️</span>
+        <div>
+          <h1 class="text-base sm:text-lg font-bold text-white tracking-wide leading-tight">Sadhana Daily Tracker</h1>
+          <p class="text-xs text-amber-400 font-medium">Accomplishments • Penalties • Fault Audit</p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <select id="memberSelector" onchange="onUserOrDateChange()" class="bg-slate-800 border border-slate-700 text-amber-300 font-semibold text-xs sm:text-sm rounded-lg px-2.5 py-1.5 outline-none cursor-pointer"></select>
+        <input type="date" id="selectedDate" onchange="onUserOrDateChange()" class="bg-slate-800 border border-slate-700 text-white text-xs rounded-lg px-2 py-1.5 outline-none cursor-pointer">
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-3xl mx-auto p-4 space-y-5">
+
+    <!-- KPI Cards -->
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+      
+      <!-- Daily Score % -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-sm">
+        <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Today's Score</span>
+        <div class="mt-2 flex items-baseline gap-2">
+          <span id="dailyScoreDisplay" class="text-3xl font-black text-white">0%</span>
+          <span id="taskRatioDisplay" class="text-xs text-slate-400">0/0 done</span>
+        </div>
+        <div class="w-full bg-slate-800 h-2 rounded-full mt-3 overflow-hidden">
+          <div id="dailyScoreBar" class="bg-amber-500 h-full rounded-full transition-all duration-300" style="width: 0%"></div>
+        </div>
+      </div>
+
+      <!-- Pending Penalties -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-sm">
+        <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Chanting Penalties</span>
+        <div class="mt-2 flex items-baseline gap-2">
+          <span id="penaltyCountDisplay" class="text-3xl font-black text-rose-400">0</span>
+          <span class="text-xs text-slate-400">rounds due</span>
+        </div>
+        <p id="penaltySubText" class="text-[11px] text-slate-400 mt-2">+4 per fault. Extra chanting offsets this.</p>
+      </div>
+
+      <!-- Weekend Lock Status -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-sm flex flex-col justify-between">
+        <div>
+          <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Weekend Status</span>
+          <div class="mt-2">
+            <span id="lockBadge" class="text-xs font-bold px-2.5 py-1 rounded-full bg-rose-950 text-rose-300 border border-rose-800/60 inline-flex items-center gap-1.5">
+              <i class="fa-solid fa-lock"></i> Locked
+            </span>
+          </div>
+        </div>
+        <p id="lockReason" class="text-[11px] text-slate-400 mt-2">Clear all penalties to unlock weekend fun.</p>
+      </div>
+
+    </div>
+
+    <!-- Navigation Tabs -->
+    <div class="flex items-center gap-2 border-b border-slate-800 pb-3">
+      <button onclick="switchView('tasks')" id="btnViewTasks" class="px-4 py-2 rounded-xl font-bold text-xs sm:text-sm bg-amber-500 text-slate-950 transition shadow">
+        <i class="fa-solid fa-list-check mr-1.5"></i> Daily Timetable
+      </button>
+      <button onclick="switchView('reports')" id="btnViewReports" class="px-4 py-2 rounded-xl font-bold text-xs sm:text-sm bg-slate-800 hover:bg-slate-700 text-slate-300 transition">
+        <i class="fa-solid fa-chart-line mr-1.5"></i> Fault Recognition & Reports
+      </button>
+      <span id="syncStatus" class="ml-auto text-xs text-amber-400 font-medium"></span>
+    </div>
+
+    <!-- VIEW 1: Daily Tasks -->
+    <div id="sectionTasks" class="space-y-3">
+      <div id="tasksContainer" class="space-y-2.5"></div>
+
+      <div class="pt-3">
+        <button onclick="saveDayToSheets()" id="saveBtn" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm py-3.5 rounded-xl shadow-lg transition flex items-center justify-center gap-2">
+          <i class="fa-solid fa-floppy-disk"></i> <span id="saveBtnText">Submit / Update Accomplishments</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- VIEW 2: Reports -->
+    <div id="sectionReports" class="hidden space-y-4">
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-3">
+        <h3 class="font-bold text-xs sm:text-sm text-white flex items-center gap-2">
+          <i class="fa-solid fa-filter text-amber-400"></i> Report Filter
+        </h3>
+        <div class="grid grid-cols-1 sm:grid-cols-4 gap-2.5">
+          <div>
+            <label class="text-[10px] text-slate-400 block mb-1">Member:</label>
+            <select id="repMember" class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2 text-xs text-white outline-none">
+              <option value="All">All Family Members</option>
+            </select>
+          </div>
+          <div>
+            <label class="text-[10px] text-slate-400 block mb-1">Range Preset:</label>
+            <select onchange="setDatePreset(this.value)" class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2 text-xs text-white outline-none">
+              <option value="today">Today</option>
+              <option value="week" selected>This Week</option>
+              <option value="month">This Month</option>
+            </select>
+          </div>
+          <div>
+            <label class="text-[10px] text-slate-400 block mb-1">Start Date:</label>
+            <input type="date" id="repStart" class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2 text-xs text-white outline-none">
+          </div>
+          <div>
+            <label class="text-[10px] text-slate-400 block mb-1">End Date:</label>
+            <input type="date" id="repEnd" class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2 text-xs text-white outline-none">
+          </div>
+        </div>
+        <button onclick="loadReportData()" class="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs px-4 py-2 rounded-lg transition">
+          Load Report
+        </button>
+      </div>
+
+      <!-- Report Analytics -->
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div class="bg-slate-900 border border-slate-800 p-3.5 rounded-xl text-center">
+          <span class="text-xs text-slate-400">Average Score</span>
+          <p id="repAvgScore" class="text-2xl font-black text-amber-400 mt-1">--%</p>
+        </div>
+        <div class="bg-slate-900 border border-slate-800 p-3.5 rounded-xl text-center">
+          <span class="text-xs text-slate-400">Total Faults</span>
+          <p id="repTotalFaults" class="text-2xl font-black text-rose-400 mt-1">0</p>
+        </div>
+        <div class="bg-slate-900 border border-slate-800 p-3.5 rounded-xl text-center">
+          <span class="text-xs text-slate-400">Penalty Rounds Pending</span>
+          <p id="repTotalPenalties" class="text-2xl font-black text-orange-400 mt-1">0</p>
+        </div>
+      </div>
+
+      <!-- Fault Log Table -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4">
+        <h4 class="font-bold text-xs sm:text-sm text-white mb-3 flex items-center gap-2">
+          <i class="fa-solid fa-triangle-exclamation text-rose-400"></i> Identified Faults & Misses
+        </h4>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs text-slate-300">
+            <thead class="bg-slate-800/70 text-slate-400 uppercase font-semibold text-[10px]">
+              <tr>
+                <th class="p-2.5">Date</th>
+                <th class="p-2.5">Member</th>
+                <th class="p-2.5">Task</th>
+                <th class="p-2.5">Recorded Value</th>
+                <th class="p-2.5">Penalty Count</th>
+              </tr>
+            </thead>
+            <tbody id="faultTableBody" class="divide-y border-slate-800">
+              <tr>
+                <td colspan="5" class="text-center py-6 text-slate-500">Click "Load Report" to fetch historical faults.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <script>
+    const API_URL = "https://script.google.com/macros/s/AKfycbzF48HsH-The423Q9Z0Ayctjofo9jVs1Q7qWC_NyM6t_pCLEtlWMIGq18JzOnEM9WhaGg/exec";
+
+    let state = {
+      members: ["Suresh R", "Kavitha S", "Dhanush S"],
+      rules: [
+        // Suresh R
+        { name: "Suresh R", task: "wake up", inputType: "time selector", targetMin: "04:15", targetMax: "04:30" },
+        { name: "Suresh R", task: "chanting", inputType: "counter", minTarget: 16 },
+        { name: "Suresh R", task: "vessels cleaning", inputType: "toggle switch" },
+        { name: "Suresh R", task: "decide what to cook based on vegetables in fridge", inputType: "toggle switch" },
+        { name: "Suresh R", task: "pooja", inputType: "time selector", targetMax: "08:45" },
+        { name: "Suresh R", task: "check phone numbers after prasadam", inputType: "toggle switch" },
+        { name: "Suresh R", task: "mridanga practice 30 min", inputType: "toggle switch" },
+        { name: "Suresh R", task: "free exercise", inputType: "toggle switch" },
+        { name: "Suresh R", task: "remove unnecessary things", inputType: "toggle switch" },
+
+        // Kavitha S
+        { name: "Kavitha S", task: "wake up", inputType: "time selector", targetMin: "05:15", targetMax: "05:30" },
+        { name: "Kavitha S", task: "chanting", inputType: "counter", minTarget: 8 },
+        { name: "Kavitha S", task: "put thinga where it belongs", inputType: "toggle switch" },
+        { name: "Kavitha S", task: "bhoga", inputType: "time selector", targetMax: "09:00" },
+        { name: "Kavitha S", task: "wash cloths", inputType: "toggle switch" },
+        { name: "Kavitha S", task: "remove unnecessary things", inputType: "toggle switch" },
+
+        // Dhanush S
+        { name: "Dhanush S", task: "wake up", inputType: "time selector", targetMin: "04:45", targetMax: "05:00" },
+        { name: "Dhanush S", task: "chanting", inputType: "counter", minTarget: 4 },
+        { name: "Dhanush S", task: "sweeping", inputType: "time selector", targetMax: "06:30" },
+        { name: "Dhanush S", task: "reading bhagavat gita 1 hour", inputType: "toggle switch" },
+        { name: "Dhanush S", task: "attend bhagavatam class", inputType: "toggle switch" },
+        { name: "Dhanush S", task: "check phone numbers after prasadam", inputType: "toggle switch" },
+        { name: "Dhanush S", task: "mridanga practice 30 min", inputType: "toggle switch" },
+        { name: "Dhanush S", task: "remove unnecessary things", inputType: "toggle switch" }
+      ],
+      currentMember: "Suresh R",
+      currentDate: new Date().toISOString().split('T')[0],
+      inputs: {}
+    };
+
+    window.onload = () => {
+      document.getElementById('selectedDate').value = state.currentDate;
+      setDatePreset('week');
+      renderMemberDropdowns();
+      onUserOrDateChange();
+    };
+
+    // JSONP Helper: Completely eliminates CORS & file:/// restrictions
+    function fetchJSONP(url) {
+      return new Promise((resolve, reject) => {
+        const callbackName = 'jsonp_callback_' + Math.round(100000 * Math.random());
+        window[callbackName] = function(data) {
+          delete window[callbackName];
+          document.body.removeChild(script);
+          resolve(data);
+        };
+
+        const script = document.createElement('script');
+        script.src = url + (url.indexOf('?') >= 0 ? '&' : '?') + 'callback=' + callbackName + '&_t=' + Date.now();
+        script.onerror = function() {
+          delete window[callbackName];
+          document.body.removeChild(script);
+          reject(new Error('Network error or invalid script URL'));
+        };
+        document.body.appendChild(script);
+      });
+    }
+
+    function renderMemberDropdowns() {
+      const mainSel = document.getElementById('memberSelector');
+      const repSel = document.getElementById('repMember');
+      mainSel.innerHTML = state.members.map(m => `<option value="${m}">${m}</option>`).join('');
+      repSel.innerHTML = `<option value="All">All Family Members</option>` + state.members.map(m => `<option value="${m}">${m}</option>`).join('');
+    }
+
+    async function onUserOrDateChange() {
+      state.currentMember = document.getElementById('memberSelector').value;
+      state.currentDate = document.getElementById('selectedDate').value;
+      state.inputs = {};
+      
+      renderTasks();
+      calculateScores();
+      await fetchExistingRecords();
+    }
+
+    function normalizeTimeInput(val) {
+      if (!val) return '';
+      let s = String(val).trim();
+      if (/^\d:\d{2}$/.test(s)) return '0' + s;
+      if (/^\d{2}:\d{2}:\d{2}$/.test(s)) return s.substring(0, 5);
+      return s;
+    }
+
+    // Fetches and pre-populates previous submissions
+    async function fetchExistingRecords() {
+      const sync = document.getElementById('syncStatus');
+      sync.innerText = "Checking records...";
+
+      try {
+        const url = `${API_URL}?action=getDayData&member=${encodeURIComponent(state.currentMember)}&date=${encodeURIComponent(state.currentDate)}`;
+        const data = await fetchJSONP(url);
+
+        if (data && data.found) {
+          const memberRules = state.rules.filter(r => r.name === state.currentMember);
+          memberRules.forEach((rule, idx) => {
+            const key = `task_${idx}`;
+            if (data.records[rule.task] !== undefined) {
+              const recVal = data.records[rule.task].value;
+              if (rule.inputType === 'toggle switch') {
+                state.inputs[key] = (recVal === true || recVal === 'TRUE' || recVal === 'true' || recVal === 1 || recVal === '1');
+              } else if (rule.inputType === 'counter') {
+                state.inputs[key] = Number(recVal) || 0;
+              } else if (rule.inputType === 'time selector') {
+                state.inputs[key] = normalizeTimeInput(recVal);
+              }
+            }
+          });
+          sync.innerText = "Loaded existing submission";
+        } else {
+          sync.innerText = "Fresh daily entry";
+        }
+      } catch (err) {
+        sync.innerText = "";
+      }
+
+      renderTasks();
+      calculateScores();
+    }
+
+    function renderTasks() {
+      const container = document.getElementById('tasksContainer');
+      const memberRules = state.rules.filter(r => r.name === state.currentMember);
+
+      container.innerHTML = memberRules.map((rule, idx) => {
+        const key = `task_${idx}`;
+        let widget = '';
+        const currentVal = state.inputs[key];
+
+        if (rule.inputType === 'time selector') {
+          const timeVal = normalizeTimeInput(currentVal);
+          widget = `
+            <input type="time" value="${timeVal}" onchange="setTaskInput('${key}', this.value)" class="bg-slate-800 border border-slate-700 text-white font-mono px-3 py-1.5 rounded-lg text-xs outline-none focus:border-amber-500">
+          `;
+        } else if (rule.inputType === 'counter') {
+          const min = rule.minTarget || 4;
+          const displayCount = currentVal !== undefined ? currentVal : 0;
+          widget = `
+            <div class="flex items-center gap-1.5 bg-slate-800 p-1 rounded-xl border border-slate-700">
+              <button onclick="incCounter('${key}', -1)" class="w-8 h-8 rounded-lg bg-slate-700 hover:bg-slate-600 text-white font-bold flex items-center justify-center text-sm">-</button>
+              <span id="counter_${key}" class="w-10 text-center font-bold text-amber-400 text-sm">${displayCount}</span>
+              <button onclick="incCounter('${key}', 1)" class="w-8 h-8 rounded-lg bg-slate-700 hover:bg-slate-600 text-white font-bold flex items-center justify-center text-sm">+</button>
+              <span class="text-[11px] text-slate-400 font-mono pr-2">min ${min}</span>
+            </div>
+          `;
+        } else {
+          const isChecked = currentVal === true ? 'checked' : '';
+          widget = `
+            <label class="relative inline-flex items-center cursor-pointer">
+              <input type="checkbox" ${isChecked} onchange="setTaskInput('${key}', this.checked)" class="sr-only peer">
+              <div class="w-11 h-6 bg-slate-700 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+            </label>
+          `;
+        }
+
+        return `
+          <div class="bg-slate-900 border border-slate-800 p-3.5 rounded-xl flex items-center justify-between gap-3 shadow-sm hover:border-slate-700 transition">
+            <div class="flex items-center gap-2.5">
+              <span id="scoreBadge_${key}" class="text-xs font-bold text-slate-500 min-w-[36px]">0%</span>
+              <h4 class="font-medium text-slate-100 text-sm capitalize">${rule.task}</h4>
+            </div>
+            <div>${widget}</div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function setTaskInput(key, val) {
+      state.inputs[key] = val;
+      calculateScores();
+    }
+
+    function incCounter(key, delta) {
+      let curr = state.inputs[key] !== undefined ? state.inputs[key] : 0;
+      curr = Math.max(0, curr + delta);
+      state.inputs[key] = curr;
+      document.getElementById(`counter_${key}`).innerText = curr;
+      calculateScores();
+    }
+
+    function calculateScores() {
+      const memberRules = state.rules.filter(r => r.name === state.currentMember);
+      let totalTasks = memberRules.length;
+      let totalScoreSum = 0;
+      let faults = 0;
+      let basePenalties = 0;
+      let extraChanting = 0;
+
+      memberRules.forEach((rule, idx) => {
+        const key = `task_${idx}`;
+        const val = state.inputs[key];
+        let score = 0;
+        let isFault = false;
+
+        if (rule.inputType === 'time selector') {
+          if (val) {
+            const cleanVal = normalizeTimeInput(val);
+            if (rule.targetMax && cleanVal <= rule.targetMax) {
+              score = 100;
+            } else {
+              score = 0;
+              isFault = true;
+            }
+          } else {
+            score = 0;
+            isFault = true;
+          }
+        } else if (rule.inputType === 'counter') {
+          const min = rule.minTarget || 4;
+          const currentCount = Number(val) || 0;
+          score = Math.min(100, Math.round((currentCount / min) * 100));
+
+          if (currentCount < min) {
+            isFault = true;
+          } else if (currentCount > min) {
+            extraChanting = currentCount - min;
+          }
+        } else {
+          if (val === true) score = 100;
+          else {
+            score = 0;
+            isFault = true;
+          }
+        }
+
+        totalScoreSum += score;
+        if (isFault) {
+          faults++;
+          basePenalties += 4;
+        }
+
+        const badge = document.getElementById(`scoreBadge_${key}`);
+        if (badge) {
+          badge.innerText = `${score}%`;
+          badge.className = `text-xs font-bold ${score === 100 ? 'text-emerald-400' : 'text-rose-400'}`;
+        }
+      });
+
+      const netPenalties = Math.max(0, basePenalties - extraChanting);
+      const avg = totalTasks > 0 ? Math.round(totalScoreSum / totalTasks) : 0;
+
+      document.getElementById('dailyScoreDisplay').innerText = `${avg}%`;
+      document.getElementById('taskRatioDisplay').innerText = `${totalTasks - faults}/${totalTasks} done`;
+      document.getElementById('dailyScoreBar').style.width = `${avg}%`;
+      document.getElementById('penaltyCountDisplay').innerText = netPenalties;
+
+      if (extraChanting > 0) {
+        document.getElementById('penaltySubText').innerText = `+${extraChanting} extra rounds offset penalty balance!`;
+      } else {
+        document.getElementById('penaltySubText').innerText = `+4 per fault. Extra chanting offsets this.`;
+      }
+
+      const lockBadge = document.getElementById('lockBadge');
+      const lockReason = document.getElementById('lockReason');
+
+      if (netPenalties > 0) {
+        lockBadge.className = 'text-xs font-bold px-2.5 py-1 rounded-full bg-rose-950 text-rose-300 border border-rose-800/60 inline-flex items-center gap-1.5';
+        lockBadge.innerHTML = '<i class="fa-solid fa-lock"></i> Locked';
+        lockReason.innerText = `Weekend locked. ${netPenalties} penalty chanting rounds remaining.`;
+      } else {
+        lockBadge.className = 'text-xs font-bold px-2.5 py-1 rounded-full bg-emerald-950 text-emerald-300 border border-emerald-800/60 inline-flex items-center gap-1.5';
+        lockBadge.innerHTML = '<i class="fa-solid fa-unlock"></i> Unlocked';
+        lockReason.innerText = `All tasks cleared and 0 penalty rounds pending. Enjoy your weekend!`;
+      }
+
+      return { avg, faults, netPenalties, extraChanting };
+    }
+
+    async function saveDayToSheets() {
+      const btn = document.getElementById('saveBtn');
+      const btnText = document.getElementById('saveBtnText');
+      btn.disabled = true;
+      btnText.innerText = "Updating Records...";
+
+      const { extraChanting } = calculateScores();
+      const memberRules = state.rules.filter(r => r.name === state.currentMember);
+
+      const logs = memberRules.map((rule, idx) => {
+        const val = state.inputs[`task_${idx}`];
+        let score = 0;
+        let isFault = false;
+
+        if (rule.inputType === 'time selector') {
+          const cleanVal = normalizeTimeInput(val);
+          if (cleanVal && (!rule.targetMax || cleanVal <= rule.targetMax)) score = 100;
+          else { score = 0; isFault = true; }
+        } else if (rule.inputType === 'counter') {
+          const min = rule.minTarget || 4;
+          score = Math.min(100, Math.round(((Number(val) || 0) / min) * 100));
+          if ((Number(val) || 0) < min) isFault = true;
+        } else {
+          score = val === true ? 100 : 0;
+          if (!val) isFault = true;
+        }
+
+        let recordedVal = 'Missed';
+        if (rule.inputType === 'time selector') recordedVal = normalizeTimeInput(val) || 'Missed';
+        else if (val !== undefined) recordedVal = String(val);
+
+        return {
+          task: rule.task,
+          recordedValue: recordedVal,
+          scorePercent: score,
+          penaltyCount: isFault ? 4 : 0
+        };
+      });
+
+      try {
+        await fetch(API_URL, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify({
+            action: 'saveDailyLog',
+            member: state.currentMember,
+            date: state.currentDate,
+            logs: logs,
+            extraChantingDone: extraChanting
+          })
+        });
+
+        document.getElementById('syncStatus').innerText = "Updated in Google Sheets!";
+        alert(`Records for ${state.currentMember} on ${state.currentDate} successfully updated in-place!`);
+      } catch (err) {
+        alert("Error updating: " + err);
+      } finally {
+        btn.disabled = false;
+        btnText.innerText = "Submit / Update Accomplishments";
+      }
+    }
+
+    function switchView(view) {
+      if (view === 'tasks') {
+        document.getElementById('sectionTasks').classList.remove('hidden');
+        document.getElementById('sectionReports').classList.add('hidden');
+        document.getElementById('btnViewTasks').className = 'px-4 py-2 rounded-xl font-bold text-xs sm:text-sm bg-amber-500 text-slate-950 transition shadow';
+        document.getElementById('btnViewReports').className = 'px-4 py-2 rounded-xl font-bold text-xs sm:text-sm bg-slate-800 hover:bg-slate-700 text-slate-300 transition';
+      } else {
+        document.getElementById('sectionTasks').classList.add('hidden');
+        document.getElementById('sectionReports').classList.remove('hidden');
+        document.getElementById('btnViewReports').className = 'px-4 py-2 rounded-xl font-bold text-xs sm:text-sm bg-amber-500 text-slate-950 transition shadow';
+        document.getElementById('btnViewTasks').className = 'px-4 py-2 rounded-xl font-bold text-xs sm:text-sm bg-slate-800 hover:bg-slate-700 text-slate-300 transition';
+        loadReportData();
+      }
+    }
+
+    function setDatePreset(preset) {
+      const today = new Date();
+      const fmt = d => d.toISOString().split('T')[0];
+
+      if (preset === 'today') {
+        document.getElementById('repStart').value = fmt(today);
+        document.getElementById('repEnd').value = fmt(today);
+      } else if (preset === 'week') {
+        const monday = new Date(today.setDate(today.getDate() - today.getDay() + 1));
+        const sunday = new Date(today.setDate(monday.getDate() + 6));
+        document.getElementById('repStart').value = fmt(monday);
+        document.getElementById('repEnd').value = fmt(sunday);
+      } else if (preset === 'month') {
+        const first = new Date(today.getFullYear(), today.getMonth(), 1);
+        const last = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+        document.getElementById('repStart').value = fmt(first);
+        document.getElementById('repEnd').value = fmt(last);
+      }
+    }
+
+    // Reports: Loads and populates historical data via JSONP
+    async function loadReportData() {
+      const member = document.getElementById('repMember').value;
+      const start = document.getElementById('repStart').value;
+      const end = document.getElementById('repEnd').value;
+      const tbody = document.getElementById('faultTableBody');
+      tbody.innerHTML = `<tr><td colspan="5" class="text-center py-6 text-slate-400">Loading audit from Google Sheets...</td></tr>`;
+
+      try {
+        const url = `${API_URL}?action=getReports&member=${encodeURIComponent(member)}&startDate=${start}&endDate=${end}`;
+        const data = await fetchJSONP(url);
+
+        document.getElementById('repAvgScore').innerText = `${data.averageScore}%`;
+        document.getElementById('repTotalFaults').innerText = data.totalFaults;
+        document.getElementById('repTotalPenalties').innerText = data.pendingPenaltyRounds;
+
+        if (!data.faultDetails || data.faultDetails.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="5" class="text-center py-6 text-emerald-400 font-medium">No faults logged for this period! Great Sadhana!</td></tr>`;
+          return;
+        }
+
+        tbody.innerHTML = data.faultDetails.map(f => `
+          <tr>
+            <td class="p-2.5 font-mono">${f.date}</td>
+            <td class="p-2.5 font-bold text-white">${f.member}</td>
+            <td class="p-2.5 capitalize">${f.task}</td>
+            <td class="p-2.5 text-rose-400 font-mono">${f.value}</td>
+            <td class="p-2.5 font-bold text-amber-400">+${f.penalty} Rounds</td>
+          </tr>
+        `).join('');
+      } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="5" class="text-center py-6 text-rose-400 font-medium">Failed to load reports. Check your internet connection.</td></tr>`;
+      }
+    }
+  </script>
+</body>
+</html>
