@@ -6,6 +6,13 @@
   <title>Sadhana Daily Routine Tracker</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Sadhana">
+  <meta name="theme-color" content="#0f172a">
+  <link rel="manifest" href="./manifest.json">
+  <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/3135/3135715.png">
 </head>
 <body class="bg-slate-950 text-slate-100 min-h-screen font-sans pb-20 selection:bg-amber-500 selection:text-black">
 
@@ -578,6 +585,13 @@
       } catch (err) {
         tbody.innerHTML = `<tr><td colspan="5" class="text-center py-6 text-rose-400 font-medium">Failed to load reports. Check your internet connection.</td></tr>`;
       }
+    }
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js')
+          .then(reg => console.log('PWA Service Worker Registered!'))
+          .catch(err => console.log('Service Worker failed:', err));
+      });
     }
   </script>
 </body>
