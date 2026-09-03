@@ -30,10 +30,10 @@
       <div class="flex items-center gap-2">
         <select id="memberSelector" onchange="onUserOrDateChange()" class="bg-slate-800 border border-slate-700 text-amber-300 font-semibold text-xs sm:text-sm rounded-lg px-2.5 py-1.5 outline-none cursor-pointer"></select>
         <input type="date" id="selectedDate" onchange="onUserOrDateChange()" class="bg-slate-800 border border-slate-700 text-white text-xs rounded-lg px-2 py-1.5 outline-none cursor-pointer">
+        <button id="pwaInstallBtn" onclick="triggerPWAInstall()" class="hidden bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs px-3 py-1.5 rounded-lg transition items-center gap-1.5 shadow">
+         <i class="fa-solid fa-download"></i> Install App
+        </button>
       </div>
-  <button id="pwaInstallBtn" onclick="triggerPWAInstall()" class="hidden bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs px-3 py-1.5 rounded-lg transition items-center gap-1.5 shadow">
-  <i class="fa-solid fa-download"></i> Install App
-</button>
     </div>
   </header>
 
