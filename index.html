@@ -4,8 +4,6 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Sadhana Daily Routine Tracker</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -13,6 +11,8 @@
   <meta name="theme-color" content="#0f172a">
   <link rel="manifest" href="./manifest.json">
   <link rel="apple-touch-icon" href="./icon.png">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body class="bg-slate-950 text-slate-100 min-h-screen font-sans pb-20 selection:bg-amber-500 selection:text-black">
 
@@ -30,8 +30,8 @@
       <div class="flex items-center gap-2">
         <select id="memberSelector" onchange="onUserOrDateChange()" class="bg-slate-800 border border-slate-700 text-amber-300 font-semibold text-xs sm:text-sm rounded-lg px-2.5 py-1.5 outline-none cursor-pointer"></select>
         <input type="date" id="selectedDate" onchange="onUserOrDateChange()" class="bg-slate-800 border border-slate-700 text-white text-xs rounded-lg px-2 py-1.5 outline-none cursor-pointer">
-        <button id="pwaInstallBtn" onclick="triggerPWAInstall()" class="hidden bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs px-3 py-1.5 rounded-lg transition items-center gap-1.5 shadow">
-         <i class="fa-solid fa-download"></i> Install App
+        <button id="pwaInstallBtn" onclick="triggerPWAInstall()" class="flex bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs px-3 py-1.5 rounded-lg transition items-center gap-1.5 shadow cursor-pointer">
+          <i class="fa-solid fa-download"></i> Install App
         </button>
       </div>
     </div>
@@ -61,7 +61,7 @@
           <span id="penaltyCountDisplay" class="text-3xl font-black text-rose-400">0</span>
           <span class="text-xs text-slate-400">rounds due</span>
         </div>
-        <p id="penaltySubText" class="text-[11px] text-slate-400 mt-2">+4 per fault. Extra chanting offsets this.</p>
+        <p id="penaltySubText" class="text-[11px] text-slate-400 mt-2">Enter a reason to waive penalty rounds.</p>
       </div>
 
       <!-- Weekend Lock Status -->
@@ -165,12 +165,13 @@
                 <th class="p-2.5">Member</th>
                 <th class="p-2.5">Task</th>
                 <th class="p-2.5">Recorded Value</th>
-                <th class="p-2.5">Penalty Count</th>
+                <th class="p-2.5">Penalty Assigned</th>
+                <th class="p-2.5">Reason / Justification</th>
               </tr>
             </thead>
             <tbody id="faultTableBody" class="divide-y border-slate-800">
               <tr>
-                <td colspan="5" class="text-center py-6 text-slate-500">Click "Load Report" to fetch historical faults.</td>
+                <td colspan="6" class="text-center py-6 text-slate-500">Click "Load Report" to fetch historical faults.</td>
               </tr>
             </tbody>
           </table>
@@ -217,7 +218,8 @@
       ],
       currentMember: "Suresh R",
       currentDate: new Date().toISOString().split('T')[0],
-      inputs: {}
+      inputs: {},
+      reasons: {}
     };
 
     window.onload = () => {
@@ -227,7 +229,6 @@
       onUserOrDateChange();
     };
 
-    // JSONP Helper: Completely eliminates CORS & file:/// restrictions
     function fetchJSONP(url) {
       return new Promise((resolve, reject) => {
         const callbackName = 'jsonp_callback_' + Math.round(100000 * Math.random());
@@ -242,7 +243,7 @@
         script.onerror = function() {
           delete window[callbackName];
           document.body.removeChild(script);
-          reject(new Error('Network error or invalid script URL'));
+          reject(new Error('Network error'));
         };
         document.body.appendChild(script);
       });
@@ -259,6 +260,7 @@
       state.currentMember = document.getElementById('memberSelector').value;
       state.currentDate = document.getElementById('selectedDate').value;
       state.inputs = {};
+      state.reasons = {};
       
       renderTasks();
       calculateScores();
@@ -273,7 +275,6 @@
       return s;
     }
 
-    // Fetches and pre-populates previous submissions
     async function fetchExistingRecords() {
       const sync = document.getElementById('syncStatus');
       sync.innerText = "Checking records...";
@@ -294,6 +295,9 @@
                 state.inputs[key] = Number(recVal) || 0;
               } else if (rule.inputType === 'time selector') {
                 state.inputs[key] = normalizeTimeInput(recVal);
+              }
+              if (data.records[rule.task].reason) {
+                state.reasons[key] = data.records[rule.task].reason;
               }
             }
           });
@@ -317,6 +321,7 @@
         const key = `task_${idx}`;
         let widget = '';
         const currentVal = state.inputs[key];
+        const currentReason = state.reasons[key] || '';
 
         if (rule.inputType === 'time selector') {
           const timeVal = normalizeTimeInput(currentVal);
@@ -345,12 +350,26 @@
         }
 
         return `
-          <div class="bg-slate-900 border border-slate-800 p-3.5 rounded-xl flex items-center justify-between gap-3 shadow-sm hover:border-slate-700 transition">
-            <div class="flex items-center gap-2.5">
-              <span id="scoreBadge_${key}" class="text-xs font-bold text-slate-500 min-w-[36px]">0%</span>
-              <h4 class="font-medium text-slate-100 text-sm capitalize">${rule.task}</h4>
+          <div class="bg-slate-900 border border-slate-800 p-3.5 rounded-xl shadow-sm hover:border-slate-700 transition space-y-2.5">
+            <div class="flex items-center justify-between gap-3">
+              <div class="flex items-center gap-2.5">
+                <span id="scoreBadge_${key}" class="text-xs font-bold text-slate-500 min-w-[36px]">0%</span>
+                <h4 class="font-medium text-slate-100 text-sm capitalize">${rule.task}</h4>
+              </div>
+              <div>${widget}</div>
             </div>
-            <div>${widget}</div>
+
+            <!-- Reason Field for Incomplete / Late Tasks -->
+            <div id="reasonBox_${key}" class="hidden pt-1.5 border-t border-slate-800/80">
+              <div class="flex items-center gap-2">
+                <i class="fa-solid fa-pen text-[10px] text-amber-400"></i>
+                <input type="text" 
+                  value="${currentReason}" 
+                  placeholder="Enter reason to waive chanting penalty (e.g. sick, emergency, travel)..." 
+                  oninput="setTaskReason('${key}', this.value)"
+                  class="w-full bg-slate-800/70 border border-slate-700/80 rounded-lg px-2.5 py-1 text-xs text-amber-200 placeholder-slate-500 outline-none focus:border-amber-500">
+              </div>
+            </div>
           </div>
         `;
       }).join('');
@@ -358,6 +377,11 @@
 
     function setTaskInput(key, val) {
       state.inputs[key] = val;
+      calculateScores();
+    }
+
+    function setTaskReason(key, val) {
+      state.reasons[key] = val.trim();
       calculateScores();
     }
 
@@ -380,6 +404,7 @@
       memberRules.forEach((rule, idx) => {
         const key = `task_${idx}`;
         const val = state.inputs[key];
+        const reason = (state.reasons[key] || '').trim();
         let score = 0;
         let isFault = false;
 
@@ -415,9 +440,19 @@
         }
 
         totalScoreSum += score;
+
+        // Show/hide reason box and compute penalty
+        const reasonBox = document.getElementById(`reasonBox_${key}`);
         if (isFault) {
           faults++;
-          basePenalties += 4;
+          if (reasonBox) reasonBox.classList.remove('hidden');
+
+          // If a reason is given, penalty is waived!
+          if (!reason) {
+            basePenalties += 4;
+          }
+        } else {
+          if (reasonBox) reasonBox.classList.add('hidden');
         }
 
         const badge = document.getElementById(`scoreBadge_${key}`);
@@ -435,10 +470,12 @@
       document.getElementById('dailyScoreBar').style.width = `${avg}%`;
       document.getElementById('penaltyCountDisplay').innerText = netPenalties;
 
-      if (extraChanting > 0) {
+      if (netPenalties === 0 && faults > 0) {
+        document.getElementById('penaltySubText').innerText = "All penalties waived due to valid reasons entered!";
+      } else if (extraChanting > 0) {
         document.getElementById('penaltySubText').innerText = `+${extraChanting} extra rounds offset penalty balance!`;
       } else {
-        document.getElementById('penaltySubText').innerText = `+4 per fault. Extra chanting offsets this.`;
+        document.getElementById('penaltySubText').innerText = "Enter a reason to waive penalty rounds.";
       }
 
       const lockBadge = document.getElementById('lockBadge');
@@ -468,6 +505,7 @@
 
       const logs = memberRules.map((rule, idx) => {
         const val = state.inputs[`task_${idx}`];
+        const reason = (state.reasons[`task_${idx}`] || '').trim();
         let score = 0;
         let isFault = false;
 
@@ -488,11 +526,15 @@
         if (rule.inputType === 'time selector') recordedVal = normalizeTimeInput(val) || 'Missed';
         else if (val !== undefined) recordedVal = String(val);
 
+        // Penalty is waived if a reason is provided
+        const penaltyToApply = (isFault && !reason) ? 4 : 0;
+
         return {
           task: rule.task,
           recordedValue: recordedVal,
           scorePercent: score,
-          penaltyCount: isFault ? 4 : 0
+          penaltyCount: penaltyToApply,
+          reason: reason
         };
       });
 
@@ -555,13 +597,12 @@
       }
     }
 
-    // Reports: Loads and populates historical data via JSONP
     async function loadReportData() {
       const member = document.getElementById('repMember').value;
       const start = document.getElementById('repStart').value;
       const end = document.getElementById('repEnd').value;
       const tbody = document.getElementById('faultTableBody');
-      tbody.innerHTML = `<tr><td colspan="5" class="text-center py-6 text-slate-400">Loading audit from Google Sheets...</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="6" class="text-center py-6 text-slate-400">Loading audit from Google Sheets...</td></tr>`;
 
       try {
         const url = `${API_URL}?action=getReports&member=${encodeURIComponent(member)}&startDate=${start}&endDate=${end}`;
@@ -572,7 +613,7 @@
         document.getElementById('repTotalPenalties').innerText = data.pendingPenaltyRounds;
 
         if (!data.faultDetails || data.faultDetails.length === 0) {
-          tbody.innerHTML = `<tr><td colspan="5" class="text-center py-6 text-emerald-400 font-medium">No faults logged for this period! Great Sadhana!</td></tr>`;
+          tbody.innerHTML = `<tr><td colspan="6" class="text-center py-6 text-emerald-400 font-medium">No faults logged for this period! Great Sadhana!</td></tr>`;
           return;
         }
 
@@ -582,13 +623,38 @@
             <td class="p-2.5 font-bold text-white">${f.member}</td>
             <td class="p-2.5 capitalize">${f.task}</td>
             <td class="p-2.5 text-rose-400 font-mono">${f.value}</td>
-            <td class="p-2.5 font-bold text-amber-400">+${f.penalty} Rounds</td>
+            <td class="p-2.5 font-bold ${f.penalty > 0 ? 'text-amber-400' : 'text-emerald-400'}">
+              ${f.penalty > 0 ? `+${f.penalty} Rounds` : 'Waived (0)'}
+            </td>
+            <td class="p-2.5 text-slate-300 italic">${f.reason || '<span class="text-slate-500">None</span>'}</td>
           </tr>
         `).join('');
       } catch (err) {
-        tbody.innerHTML = `<tr><td colspan="5" class="text-center py-6 text-rose-400 font-medium">Failed to load reports. Check your internet connection.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="6" class="text-center py-6 text-rose-400 font-medium">Failed to load reports. Check your internet connection.</td></tr>`;
       }
     }
+
+    // PWA Install prompt handling
+    let deferredPrompt;
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+    });
+
+    function triggerPWAInstall() {
+      if (deferredPrompt) {
+        deferredPrompt.prompt();
+        deferredPrompt.userChoice.then((choiceResult) => {
+          if (choiceResult.outcome === 'accepted') {
+            document.getElementById('pwaInstallBtn').classList.add('hidden');
+          }
+          deferredPrompt = null;
+        });
+      } else {
+        alert("To install on your phone: Tap Chrome's 3 dots (⋮) and tap 'Install app' or 'Add to Home screen'. Ensure home screen layout is unlocked in phone settings.");
+      }
+    }
+
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('./sw.js')
@@ -596,31 +662,6 @@
           .catch(err => console.log('Service Worker failed:', err));
       });
     }
-    let deferredPrompt;
-
-window.addEventListener('beforeinstallprompt', (e) => {
-  // Prevent browser from quietly ignoring the install prompt
-  e.preventDefault();
-  deferredPrompt = e;
-  // Show the install button in your app header
-  const btn = document.getElementById('pwaInstallBtn');
-  if (btn) {
-    btn.classList.remove('hidden');
-    btn.classList.add('flex');
-  }
-});
-
-function triggerPWAInstall() {
-  if (deferredPrompt) {
-    deferredPrompt.prompt();
-    deferredPrompt.userChoice.then((choiceResult) => {
-      if (choiceResult.outcome === 'accepted') {
-        document.getElementById('pwaInstallBtn').classList.add('hidden');
-      }
-      deferredPrompt = null;
-    });
-  }
-}
   </script>
 </body>
 </html>
