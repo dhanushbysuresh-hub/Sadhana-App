@@ -579,16 +579,32 @@
 
     function setDatePreset(preset) {
       const today = new Date();
-      const fmt = d => d.toISOString().split('T')[0];
+      // Format as YYYY-MM-DD using local time
+      const fmt = d => {
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      };
 
       if (preset === 'today') {
         document.getElementById('repStart').value = fmt(today);
         document.getElementById('repEnd').value = fmt(today);
       } else if (preset === 'week') {
-        const monday = new Date(today.setDate(today.getDate() - today.getDay() + 1));
-        const sunday = new Date(today.setDate(monday.getDate() + 6));
-        document.getElementById('repStart').value = fmt(monday);
-        document.getElementById('repEnd').value = fmt(sunday);
+        const dayOfWeek = today.getDay(); // 0 = Sun, 1 = Mon, ..., 5 = Fri, 6 = Sat
+        
+        // Calculate days passed since last Saturday:
+        // If today is Saturday (day 6), use the 7-day week that just concluded (7 days ago to yesterday's Friday)
+        const daysBackToSaturday = (dayOfWeek === 6) ? 7 : (dayOfWeek + 1);
+
+        const saturday = new Date(today);
+        saturday.setDate(today.getDate() - daysBackToSaturday);
+
+        const friday = new Date(saturday);
+        friday.setDate(saturday.getDate() + 6);
+
+        document.getElementById('repStart').value = fmt(saturday);
+        document.getElementById('repEnd').value = fmt(friday);
       } else if (preset === 'month') {
         const first = new Date(today.getFullYear(), today.getMonth(), 1);
         const last = new Date(today.getFullYear(), today.getMonth() + 1, 0);
